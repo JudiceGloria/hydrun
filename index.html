@@ -4,113 +4,159 @@
   <meta charset="UTF-8">
   <title>Hydrun</title>
   <style>
-    body { font-family: Arial; background: #f4f4f4; padding: 20px; }
-    h1 { color: #2c3e50; }
+    body { font-family: Arial; background: #f9f9f9; padding: 20px; }
     .section { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    input, button { padding: 10px; margin: 5px; }
-    .leaderboard li { margin: 4px 0; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-  <h1>🏃💧 Hydrun</h1>
-
-  <div class="section">
-    <h2>Set Daily Goals</h2>
-    Water Goal (liters): <input id="waterGoal" type="number" value="2"> <br>
-    Run Goal (km): <input id="runGoal" type="number" value="5">
+  <div id="loginSection" class="section">
+    <h2>Login to Hydrun</h2>
+    <input type="text" id="usernameInput" placeholder="Enter your name" />
+    <button onclick="login()">Login</button>
   </div>
 
-  <div class="section">
-    <h2>Log Activity</h2>
-    Water Drank (liters): <input id="waterInput" type="number"> 
-    <button onclick="logWater()">Add Water</button><br>
-    
-    Distance Run (km): <input id="runInput" type="number"> 
-    <button onclick="logRun()">Add Run</button>
-  </div>
+  <div id="appSection" class="hidden">
+    <h1>🏃💧 Hydrun</h1>
+    <p>Welcome, <span id="usernameDisplay"></span>!</p>
 
-  <div class="section">
-    <h2>Progress</h2>
-    <p id="progressDisplay"></p>
-  </div>
+    <!-- Water Tracker -->
+    <div class="section">
+      <h2>💧 Water Tracker</h2>
+      Daily Goal (L): <input type="number" id="waterGoal" value="2" />
+      Water Drank (L): <input type="number" id="waterInput" />
+      <button onclick="logWater()">Add Water</button>
+      <p id="waterProgress"></p>
+    </div>
 
-  <div class="section">
-    <h2>AI Tips</h2>
-    <p id="aiTips"></p>
-  </div>
+    <!-- Run Tracker -->
+    <div class="section">
+      <h2>🏃 Running Tracker</h2>
+      Daily Goal (km): <input type="number" id="runGoal" value="5" />
+      Distance Run (km): <input type="number" id="runInput" />
+      <button onclick="logRun()">Add Run</button>
+      <p id="runProgress"></p>
+    </div>
 
-  <div class="section">
-    <h2>🏆 Leaderboard (Top Runners Today)</h2>
-    <ul class="leaderboard">
-      <li>Alice - 10 km</li>
-      <li>Bob - 7.5 km</li>
-      <li>You - <span id="yourRun">0</span> km</li>
-    </ul>
-  </div>
+    <!-- AI Tips -->
+    <div class="section">
+      <h2>🤖 AI Tips</h2>
+      <p id="aiTips"></p>
+    </div>
 
-  <div class="section">
-    <h2>🔥 Streak</h2>
-    <p id="streakDisplay">0 days</p>
+    <!-- Streak -->
+    <div class="section">
+      <h2>🔥 Streak</h2>
+      <p id="streakDisplay">0 days</p>
+    </div>
+
+    <button onclick="logout()">Log Out</button>
   </div>
 
   <script>
-    let water = 0;
-    let run = 0;
-    let streak = 0;
-    let lastActive = null;
+    let userData = {
+      water: 0,
+      run: 0,
+      streak: 0,
+      lastActive: null
+    };
+
+    function login() {
+      const username = document.getElementById('usernameInput').value.trim();
+      if (!username) return alert("Please enter your name.");
+
+      const saved = localStorage.getItem(`hydrun_${username}`);
+      if (saved) {
+        userData = JSON.parse(saved);
+      }
+
+      userData.username = username;
+      localStorage.setItem("hydrun_currentUser", username);
+
+      document.getElementById('usernameDisplay').textContent = username;
+      document.getElementById('loginSection').classList.add('hidden');
+      document.getElementById('appSection').classList.remove('hidden');
+      updateDisplay();
+    }
+
+    function logout() {
+      localStorage.removeItem("hydrun_currentUser");
+      location.reload();
+    }
+
+    function saveData() {
+      if (userData.username) {
+        localStorage.setItem(`hydrun_${userData.username}`, JSON.stringify(userData));
+      }
+    }
 
     function logWater() {
-      let input = parseFloat(document.getElementById('waterInput').value);
+      const input = parseFloat(document.getElementById('waterInput').value);
       if (!isNaN(input)) {
-        water += input;
-        updateProgress();
+        userData.water += input;
+        updateDisplay();
+        saveData();
       }
     }
 
     function logRun() {
-      let input = parseFloat(document.getElementById('runInput').value);
+      const input = parseFloat(document.getElementById('runInput').value);
       if (!isNaN(input)) {
-        run += input;
-        updateProgress();
-        document.getElementById('yourRun').textContent = run.toFixed(1);
+        userData.run += input;
+        updateDisplay();
+        saveData();
       }
     }
 
-    function updateProgress() {
-      let waterGoal = parseFloat(document.getElementById('waterGoal').value);
-      let runGoal = parseFloat(document.getElementById('runGoal').value);
+    function updateDisplay() {
+      const waterGoal = parseFloat(document.getElementById('waterGoal').value);
+      const runGoal = parseFloat(document.getElementById('runGoal').value);
 
-      let waterPercent = ((water / waterGoal) * 100).toFixed(1);
-      let runPercent = ((run / runGoal) * 100).toFixed(1);
+      const waterPercent = ((userData.water / waterGoal) * 100).toFixed(1);
+      const runPercent = ((userData.run / runGoal) * 100).toFixed(1);
 
-      document.getElementById('progressDisplay').textContent = 
-        `Water: ${water.toFixed(1)}L (${waterPercent}%) | Run: ${run.toFixed(1)} km (${runPercent}%)`;
+      document.getElementById('waterProgress').textContent =
+        `Drank: ${userData.water.toFixed(1)}L (${waterPercent}%)`;
 
-      generateTips(waterPercent, runPercent);
+      document.getElementById('runProgress').textContent =
+        `Ran: ${userData.run.toFixed(1)}km (${runPercent}%)`;
+
+      updateTips(waterPercent, runPercent);
       updateStreak(waterPercent, runPercent);
     }
 
-    function generateTips(waterPercent, runPercent) {
-      let tips = "";
+    function updateTips(waterPercent, runPercent) {
+      let tip = "";
 
-      if (waterPercent < 50) tips += "💧 Try to drink more water before your next run. ";
-      else tips += "✅ You're well hydrated! ";
+      if (waterPercent < 50) tip += "💧 Drink more water! ";
+      else tip += "✅ You're well hydrated. ";
 
-      if (runPercent < 50) tips += "🏃 Push a little more to hit your run goal.";
-      else tips += "🔥 You're on track with your running today!";
+      if (runPercent < 50) tip += "🏃 Keep moving to reach your run goal.";
+      else tip += "🔥 Great job on your running today!";
 
-      document.getElementById('aiTips').textContent = tips;
+      document.getElementById('aiTips').textContent = tip;
     }
 
     function updateStreak(waterPercent, runPercent) {
-      let today = new Date().toDateString();
-      if (lastActive !== today && waterPercent >= 100 && runPercent >= 100) {
-        streak += 1;
-        lastActive = today;
+      const today = new Date().toDateString();
+      if (userData.lastActive !== today && waterPercent >= 100 && runPercent >= 100) {
+        userData.streak += 1;
+        userData.lastActive = today;
+        saveData();
       }
-      document.getElementById('streakDisplay').textContent = `${streak} days`;
+      document.getElementById('streakDisplay').textContent = `${userData.streak} day streak`;
     }
+
+    // Auto login if saved
+    window.onload = () => {
+      const current = localStorage.getItem("hydrun_currentUser");
+      if (current) {
+        document.getElementById('usernameInput').value = current;
+        login();
+      }
+    };
   </script>
 
 </body>
